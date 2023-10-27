@@ -1,0 +1,130 @@
+{
+  "name": "mongodb_document_size_limits_reached",
+  "description": "This incident type relates to the situation where the limit of the document size in a MongoDB database has been exceeded. MongoDB is a type of NoSQL database that stores data in a document format, and each document has a defined size limit. When this limit is reached, it can cause issues with data storage and retrieval, potentially leading to system downtime or data loss.",
+  "params": [
+    {
+      "name": "COLLECTION_NAME",
+      "value": ""
+    },
+    {
+      "name": "MAX_SIZE",
+      "value": ""
+    },
+    {
+      "name": "MONGODB_CONF_FILE",
+      "value": ""
+    },
+    {
+      "name": "NEW_LIMIT",
+      "value": ""
+    },
+    {
+      "name": "DATABASE_NAME",
+      "value": ""
+    },
+    {
+      "name": "HOST_NAME",
+      "value": ""
+    },
+    {
+      "name": "K8S_CLUSTER_NAME",
+      "value": ""
+    },
+    {
+      "name": "NAMESPACE",
+      "value": ""
+    }
+  ],
+  "cells": [
+    {
+      "name": "cell_1",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## MongoDB document size limits reached.\nThis incident type relates to the situation where the limit of the document size in a MongoDB database has been exceeded. MongoDB is a type of NoSQL database that stores data in a document format, and each document has a defined size limit. When this limit is reached, it can cause issues with data storage and retrieval, potentially leading to system downtime or data loss."
+    },
+    {
+      "name": "cell_2",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## 1. Check the current size of the MongoDB document"
+    },
+    {
+      "name": "cell_3",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `mongo ${DATABASE_NAME} --eval \"db.${COLLECTION_NAME}.stats().size\"`"
+    },
+    {
+      "name": "cell_4",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## 2. Check the maximum document size for the MongoDB version being used"
+    },
+    {
+      "name": "cell_5",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `mongo ${DATABASE_NAME} --eval \"db.${COLLECTION_NAME}.getMongo().getDB('admin').runCommand({getParameter: 1, maxBsonObjectSize: 1})\"`"
+    },
+    {
+      "name": "cell_6",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## 3. Check the size of the largest document in the MongoDB collection"
+    },
+    {
+      "name": "cell_7",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `mongo ${DATABASE_NAME} --eval \"db.${COLLECTION_NAME}.find().sort({$natural:-1}).limit(1).explain().executionStats.allPlansExecution[0].winningPlan\"`"
+    },
+    {
+      "name": "cell_8",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## 4. Check for any indexes that may be causing the document size limit to be reached"
+    },
+    {
+      "name": "cell_9",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `mongo ${DATABASE_NAME} --eval \"db.${COLLECTION_NAME}.getIndexes()\"`"
+    },
+    {
+      "name": "cell_10",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## 5. Check for any documents that may be exceeding the size limit"
+    },
+    {
+      "name": "cell_11",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `mongo ${DATABASE_NAME} --eval \"db.${COLLECTION_NAME}.find({$where: 'Object.bsonsize(this) >= ${MAX_SIZE}'})\"`"
+    },
+    {
+      "name": "cell_12",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## 6. Check for any MongoDB configuration settings that may be impacting the document size limit"
+    },
+    {
+      "name": "cell_13",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `cat /etc/mongod.conf`"
+    },
+    {
+      "name": "cell_14",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Increase the document size limit in MongoDB configuration."
+    },
+    {
+      "name": "cell_15",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_update_mongo_limit($MONGODB_CONF_FILE, $NEW_LIMIT, $DATABASE_NAME)"
+    }
+  ]
+}
